@@ -188,8 +188,8 @@ int main(int argc, char *argv[])
     // add any newly arriving processes to the end of the queue
     for (int i = 0; i < size; i++) {
       arriving_proc = &data[i];
-      if (added_proc->arrival_time == curr_time) {
-	TAILQ_INSERT_TAIL(&list, added_proc, pointers);
+      if (arriving_proc->arrival_time == curr_time) {
+	TAILQ_INSERT_TAIL(&list, arriving_proc, pointers);
       }
     }
 
@@ -224,6 +224,7 @@ int main(int argc, char *argv[])
 	total_waiting_time += (elapsed_time - curr_proc->arrival_time - curr_proc->burst_time);
 	time_within_slice = 0;
       }
+    }
 
     curr_time++;
 
@@ -232,11 +233,11 @@ int main(int argc, char *argv[])
       curr_proc = &data[i];
       if (curr_proc->time_remaining > 0)
 	break;
-      if (i = size - 1)
+      if (i == size - 1)
 	processes_complete = true;
     }
-    
   }
+    
   
   /* End of "Your code here" */
 
