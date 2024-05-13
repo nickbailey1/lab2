@@ -22,6 +22,7 @@ struct process
 
   /* Additional fields here */
   bool arrived_yet;
+  u32 time_remaining;
   /* End of "Additional fields here" */
 };
 
@@ -166,9 +167,14 @@ int main(int argc, char *argv[])
 
   struct process *curr_proc;
 
+  // didn't want to modify init_processes, so initialize each arrived_yet bool
+  // and set time_remaining
+  // also use this loop to figure out earliest arrival time and start curr_time
+  // at that
   for (int i = 0; i < size; i++) {
     curr_proc = &data[i];
     curr_proc->arrived_yet = false;
+    curr_proc->time_remaining = curr_proc->burst_time;
     if (curr_proc->arrival_time < curr_time) {
       curr_time = curr_proc->arrival_time;
     }
@@ -187,30 +193,50 @@ int main(int argc, char *argv[])
       }
     }
 
-    // add the time-slice-expiring process to the end of the queue
-    if (time_within_slice == quantum_length && curr_proc->burst_time > 0) {
+    // if a process's time slice is expiring, add it to the end of the queue
+    if (time_within_slice == quantum_length && curr_proc->time_remaining > 0) {
       TAILQ_INSERT_TAIL(&list, curr_proc, pointers);
       time_within_slice = 0;
     }
 
+    // if a new time slice has started, the front of the queue is now curr_proc
     if (time_within_slice == 0) {
       curr_proc = TAILQ_FIRST(&list);
       TAILQ_REMOVE(&list, curr_proc, pointers);
     }
 
+    // if this process is just arriving, calculate its response time and add it to the total
     if (!curr_proc->arrived_yet) {
       curr_proc->arrived_yet = true;
       total_response_time += (curr_time - curr_proc->arrival_time);
     }
 
+    // if the time slice is not over, do one time-unit's work on the process
     if (time_within_slice < quantum_length) {
-      curr_proc->burst_time -= 1;
-      elapsed_time += 1;
-    }
+      // decrease time remaining if not done yet
+      if (curr_proc->time_remaining > 0) {
+	curr_proc->time_remaining--;
+	elapsed_time++;
+	time_within_slice++;
+      }
+      // if done, we can calculate wait time
+      if (curr_proc->time_remaining == 0) {
+	total_waiting_time += (elapsed_time - curr_proc->arrival_time - curr_proc->burst_time);
+	time_within_slice = 0;
+      }
 
-    if (curr_proc->burst_time == 0) {
-      total_waiting_time += (elapsed_time - current_process->arrival_time);
-      current_burs
+    curr_time++;
+
+    // re-evaluate whether processes are complete:
+    for (int i = 0; i < size; i++) {
+      curr_proc = &data[i];
+      if (curr_proc->time_remaining > 0)
+	break;
+      if (i = size - 1)
+	processes_complete = true;
+    }
+    
+  }
   
   /* End of "Your code here" */
 
