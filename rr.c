@@ -143,6 +143,19 @@ void init_processes(const char *path,
   close(fd);
 }
 
+// tried many times to do this evaluation directly within the loop in main, would never work so
+// moved to helper function
+bool processes_complete_helper(struct process *data, u32 size) {
+  struct process *curr_proc;
+  for (int i = 0; i < size; i++) {
+    curr_proc = &data[i];
+    if (curr_proc->time_remaining > 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 int main(int argc, char *argv[])
 {
   if (argc != 3)
@@ -196,25 +209,25 @@ int main(int argc, char *argv[])
     // if a process's time slice is expiring, add it to the end of the queue
     if (curr_proc && time_within_slice == quantum_length + 1 && curr_proc->time_remaining > 0) {
       TAILQ_INSERT_TAIL(&list, curr_proc, pointers);
-      curr_proc = NULL;
       time_within_slice = 1;
     }
 
     // if a new time slice has started, the front of the queue is now curr_proc
-    if (!curr_proc && !TAILQ_EMPTY(&list)) {
+    if (curr_proc && time_within_slice == 1) {
+      if (TAILQ_EMPTY(&list))
+        return -1;
       curr_proc = TAILQ_FIRST(&list);
       TAILQ_REMOVE(&list, curr_proc, pointers);
-      time_within_slice = 1;
     }
 
     // if this process is just arriving, calculate its response time and add it to the total
     if (curr_proc && !curr_proc->arrived_yet) {
       curr_proc->arrived_yet = true;
-      total_response_time += (curr_time - curr_proc->arrival_time);
+      total_response_time += (elapsed_time - curr_proc->arrival_time);
     }
 
     // if the time slice is not over, do one time-unit's work on the process
-    if (time_within_slice <= quantum_length) {
+    if (curr_proc && time_within_slice <= quantum_length) {
       // decrease time remaining if not done yet
       if (curr_proc->time_remaining > 0) {
         curr_proc->time_remaining--;
@@ -223,22 +236,14 @@ int main(int argc, char *argv[])
       // if done, we can calculate wait time
       if (curr_proc->time_remaining == 0) {
         total_waiting_time += (elapsed_time - curr_proc->arrival_time - curr_proc->burst_time);
-        curr_proc = NULL;
-        time_within_slice = 1;
+        time_within_slice = 0;
       }
     }
     time_within_slice++;
     curr_time++;
 
     // re-evaluate whether processes are complete:
-    processes_complete = true;
-    for (int i = 0; i < size; i++) {
-      curr_proc = &data[i];
-      if (curr_proc->time_remaining > 0) {
-        processes_complete = false;
-        break;
-      }
-    }
+    processes_complete = processes_complete_helper(data, size);
   }
     
   
