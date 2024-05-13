@@ -21,6 +21,7 @@ struct process
   TAILQ_ENTRY(process) pointers;
 
   /* Additional fields here */
+  bool arrived_yet;
   /* End of "Additional fields here" */
 };
 
@@ -160,6 +161,56 @@ int main(int argc, char *argv[])
   u32 total_response_time = 0;
 
   /* Your code here */
+
+  u32 curr_time = data[0].arrival_time;
+
+  struct process *curr_proc;
+
+  for (int i = 0; i < size; i++) {
+    curr_proc = &data[i];
+    curr_proc->arrived_yet = false;
+    if (curr_proc->arrival_time < curr_time) {
+      curr_time = curr_proc->arrival_time;
+    }
+  }
+  u32 time_within_slice = 0;
+  u32 elapsed_time = curr_time;
+  bool processes_complete = false;
+
+  struct process * arriving_proc;
+  while (!processes_complete) {
+    // add any newly arriving processes to the end of the queue
+    for (int i = 0; i < size; i++) {
+      arriving_proc = &data[i];
+      if (added_proc->arrival_time == curr_time) {
+	TAILQ_INSERT_TAIL(&list, added_proc, pointers);
+      }
+    }
+
+    // add the time-slice-expiring process to the end of the queue
+    if (time_within_slice == quantum_length && curr_proc->burst_time > 0) {
+      TAILQ_INSERT_TAIL(&list, curr_proc, pointers);
+      time_within_slice = 0;
+    }
+
+    if (time_within_slice == 0) {
+      curr_proc = TAILQ_FIRST(&list);
+      TAILQ_REMOVE(&list, curr_proc, pointers);
+    }
+
+    if (!curr_proc->arrived_yet) {
+      curr_proc->arrived_yet = true;
+      total_response_time += (curr_time - curr_proc->arrival_time);
+    }
+
+    if (time_within_slice < quantum_length) {
+      curr_proc->burst_time -= 1;
+      elapsed_time += 1;
+    }
+
+    if (curr_proc->burst_time == 0) {
+      total_waiting_time += (elapsed_time - current_process->arrival_time);
+      current_burs
   
   /* End of "Your code here" */
 
